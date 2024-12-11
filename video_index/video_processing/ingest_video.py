@@ -11,8 +11,8 @@ import string
 import os
 import re
 import argparse
-from video_processing.frame_diff import OpenCVFrameWriter
-from video_processing.whisper_turbo import WhisperTurbo
+from video_index.video_processing.frame_diff import OpenCVFrameWriter
+from video_index.video_processing.whisper_turbo import WhisperTurbo
 
 def replace_non_alphanumeric(input_string, rep_string):
     # Replace all non-alphabetic and non-numeric characters with a space
