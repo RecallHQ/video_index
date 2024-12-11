@@ -9,7 +9,7 @@ setup(
     version="1.0",
     description="",
     author="RecallHQ",
-    packages=find_packages(),
+    packages=find_packages(exclude=["example*"]),
     install_requires=[
         str(r)
         for r in pkg_resources.parse_requirements(

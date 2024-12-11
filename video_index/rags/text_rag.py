@@ -2,21 +2,23 @@ import openai
 import json
 import os
 import re
+import traceback
+
 from dotenv import load_dotenv
 from pathlib import Path
-import traceback
+
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Document
 from llama_index.core.retrievers import VectorIndexRetriever
 from llama_index.core import Settings
 from llama_index.core.callbacks import CallbackManager
-from recall_utils import load_state
-from constants import KNOWLEDGE_BASE_PATH
+
 from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
 from llama_index.core.node_parser import SimpleNodeParser
-from video_processing.video_rag_qdrant import VideoRagQdrant
 from llama_index.embeddings.openai import OpenAIEmbedding
 #from langsmith.wrappers import wrap_openai
-
+from video_index.video_utils import load_state
+from video_index.constants import KNOWLEDGE_BASE_PATH
+from video_index.video_processing.video_rag_qdrant import VideoRagQdrant
 # Load environment variables
 load_dotenv()
 
@@ -98,10 +100,10 @@ def load_knowledge_base(media_label):
     print(f"Knowledge base loaded: {input_data}")
     return input_data
 
-def create_new_index(media_label):
+def create_new_index(media_label, storage_root_path='./events_kb'):
     print(f"Creating or Loading new index for {media_label}")
+
     media_label_path = re.sub(r'[^a-zA-Z0-9]', '_', media_label)
-    storage_root_path='./events_kb'
     media_storage_path = os.path.join(storage_root_path, media_label_path)
     storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
     text_storage_path = os.path.join(media_storage_path, 'text_vector_store')
@@ -317,7 +319,7 @@ async def update_response_container(response_container, response_text, token):
     response_text.append(token)
     response_container.markdown(''.join(response_text))
 
-async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, session_state, response_container, is_chainlit=False):
+async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, session_state, response_container=None, is_chainlit=False):
     response_text = []
     function_data = {}
     video_rag_inst = session_state[media_label]
@@ -333,7 +335,8 @@ async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, sessi
             await response_container.stream_token(part.delta)
         else:
             response_text.append(part.delta)
-            response_container.markdown(''.join(response_text))
+            if response_container:
+                response_container.markdown(''.join(response_text))
 
     if is_chainlit:
         await response_container.update()
@@ -378,17 +381,18 @@ async def get_llm_response(query, messages, tools_call=True, response_container=
         if token := part.choices[0].delta.content or "":
             #await update_response_container(response_container, response_text, token)
             response_text.append(token)
-            response_container.markdown(''.join(response_text))
+            if response_container:
+                response_container.markdown(''.join(response_text))
     for index, index_data in function_data.items():
         index_data["name"] = ''.join(index_data["name"])
         index_data["arguments"] = ''.join(index_data["arguments"])
     return ''.join(response_text), function_data
 
-def search_knowledge_base(query, media_label, session_state):
+def search_knowledge_base(query, media_label, session_state, storage_root_path='./events_kb'):
     print(f"Query: {query} Media label: {media_label}")
     media_label_path = re.sub(r'[^a-zA-Z0-9]', '_', media_label)
 
-    storage_root_path='./events_kb'
+    
     media_storage_path = os.path.join(storage_root_path, media_label_path)
     storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
     text_storage_path = os.path.join(media_storage_path, 'text_vector_store')

@@ -5,8 +5,8 @@ import json
 import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
-from video_processing.immersive_server import manager
+from video_index.rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
+from video_index.video_processing.immersive_server import manager
 
 def update_video_message():
     apex_message = cl.user_session.get("apex_message")
