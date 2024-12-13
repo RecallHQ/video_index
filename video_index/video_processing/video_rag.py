@@ -69,7 +69,8 @@ class VideoRag:
             # Create a local Qdrant vector store
             lock_fpath = os.path.join(self.storage_path, '.lock')
             print(f"Lock file is located at {lock_fpath}")
-            print(os.listdir(self.storage_path))
+            if os.path.exists(self.storage_path):
+                print(os.listdir(self.storage_path))
             if os.path.exists(lock_fpath):
                 print(f"Removing lock file: {lock_fpath}")
                 os.remove(lock_fpath)
