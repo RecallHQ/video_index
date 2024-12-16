@@ -113,7 +113,7 @@ def create_new_index(media_label, storage_root_path='./events_kb'):
     video_rag_inst = VideoRagQdrant(data_path,
         storage_path = storage_path, text_storage_path = text_storage_path,
         text_tsindex_dirpath = indices_path, image_tsindex_dirpath = indices_path)
-    #video_rag_inst.create_ts_index()
+    video_rag_inst.create_ts_index()
     video_rag_inst.create_vector_index(documents=[])
     video_rag_inst.init_multimodal_oai()
 
