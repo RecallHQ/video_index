@@ -102,7 +102,9 @@ def load_knowledge_base(media_label):
 
 def create_new_index(media_label, storage_root_path='./events_kb'):
     print(f"Creating or Loading new index for {media_label}")
-
+    if media_label == 'LLM Agents Bootcamp':
+        media_label = 'LLM Agents Course'
+   
     media_label_path = re.sub(r'[^a-zA-Z0-9]', '_', media_label)
     media_storage_path = os.path.join(storage_root_path, media_label_path)
     storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
