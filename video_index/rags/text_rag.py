@@ -392,15 +392,6 @@ async def get_llm_response(query, messages, tools_call=True, response_container=
 
 def search_knowledge_base(query, media_label, session_state, storage_root_path='./events_kb'):
     print(f"Query: {query} Media label: {media_label}")
-    if media_label == 'LLM Agents Bootcamp':
-        media_label = 'LLM Agents Course'
-    media_label_path = re.sub(r'[^a-zA-Z0-9]', '_', media_label)
-    
-    media_storage_path = os.path.join(storage_root_path, media_label_path)
-    storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
-    text_storage_path = os.path.join(media_storage_path, 'text_vector_store')
-    indices_path = os.path.join(media_storage_path, 'indices')
-    data_path = os.path.join(media_storage_path, 'data')
 
     video_rag_inst = session_state[media_label]
 
