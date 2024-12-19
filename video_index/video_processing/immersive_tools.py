@@ -190,11 +190,11 @@ query_event_def =  {
     }
 }
 
-async def query_event_handler(query: str, event_name: str = "Google I/O 2024"):
+async def query_event_handler(query: str, event_name: str = "LLM Agents Bootcamp"):
     media_label = cl.user_session.get("media_label")
     indexes = cl.user_session.get("indexes") 
 
-    media_label = "Google I/O 2024"
+    media_label = "LLM Agents Bootcamp"
     print(f"Processing query: {query} for media_label: {media_label} or event_name: {event_name}")
     if not media_label:
         media_label = event_name
