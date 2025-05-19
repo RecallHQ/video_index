@@ -182,7 +182,10 @@ def load_mm_data(video_rag_inst, media_label, media_storage_path, video_paths):
                 img_path = img_documents[idx+i].metadata['file_path']
                 search_path = os.path.join(Path(img_path).parent.name, Path(img_path).name)
                 print(search_path)
-                img_documents[idx+i].metadata['timestamp'] = video_rag_inst.image_search(search_path)
+                try:
+                    img_documents[idx+i].metadata['timestamp'] = video_rag_inst.image_search(search_path)
+                except:
+                      continue
         all_img_docs.extend(img_documents)
 
     return text_docs, all_img_docs
