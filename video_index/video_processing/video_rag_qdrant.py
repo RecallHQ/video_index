@@ -38,13 +38,13 @@ class VideoRagQdrant(VideoRag):
         img_nodes, text_nodes = self.retrieve_internal(retriever_engine=self.retriever_engine, query_str=query_str)
 
         storage_root_path = self.storage_path.split('events_kb/', 1)[0]
-
+        """
         for node in img_nodes:
             relative_file_path = node.metadata["file_path"].split('events_kb/', 1)[1]
             new_img_path = os.path.join(storage_root_path, 'events_kb', relative_file_path)
             node.metadata["file_path"] = new_img_path
             img_docs.append(ImageDocument(text=node.text, image_mimetype=node.image_mimetype, metadata=node.metadata))
-
+        """
         for node in text_nodes:
             relative_file_path = node.metadata["file_path"].split('events_kb/', 1)[1]
             new_text_path = os.path.join(storage_root_path, 'events_kb', relative_file_path)

@@ -190,9 +190,8 @@ def load_mm_data(video_rag_inst, media_label, media_storage_path, video_paths):
 
     return text_docs, all_img_docs
 
-def save_processed_document(media_label, video_paths, session_state):
+def save_processed_document(media_label, video_paths, session_state, storage_root_path='./events_kb'):
     media_label_path = re.sub(r'[^a-zA-Z0-9]', '_', media_label)
-    storage_root_path='./events_kb'
     media_storage_path = os.path.join(storage_root_path, media_label_path)
     storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
     text_storage_path = os.path.join(media_storage_path, 'text_vector_store')
@@ -204,7 +203,7 @@ def save_processed_document(media_label, video_paths, session_state):
         video_rag_inst = session_state[media_label]
     else:
         print(f"Index for {media_label} DOES NOT exist in session_state")
-        video_rag_inst = create_new_index(media_label)
+        video_rag_inst = create_new_index(media_label, storage_root_path=storage_root_path)
         session_state[media_label] = video_rag_inst
 
     text_docs, img_docs = load_mm_data(video_rag_inst, media_label, media_storage_path, video_paths)
@@ -214,9 +213,8 @@ def save_processed_document(media_label, video_paths, session_state):
     print(f"Text Index documents count after adding new documents: {video_rag_inst.count_text_documents()}")
     return text_docs, img_docs
 
-def generate_tags_and_images(media_label, session_state):
+def generate_tags_and_images(media_label, session_state, storage_root_path='./events_kb'):
     print(f"Generating tags and images for media label: {media_label}")
-    storage_root_path='./events_kb'
     media_label_path = re.sub(r'[^a-zA-Z0-9]', '_', media_label)
     media_storage_path = os.path.join(storage_root_path, media_label_path)
     storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
@@ -324,9 +322,9 @@ async def update_response_container(response_container, response_text, token):
     response_text.append(token)
     response_container.markdown(''.join(response_text))
 
-async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, session_state, response_container=None, is_chainlit=False):
-    response_text = []
-    function_data = {}
+async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, session_state):
+    #response_text = []
+    #function_data = {}
     video_rag_inst = session_state[media_label]
     context = f"The following is the context of the {media_label}. Answer user's questions from the provided text and image documents."
     event_metadata = {
@@ -336,20 +334,11 @@ async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, sessi
 
     stream = await video_rag_inst.query_with_oai_stream(query_str, context, img_docs, event_metadata=event_metadata)
     async for part in stream:
-        if is_chainlit:
-            await response_container.stream_token(part.delta)
-        else:
-            response_text.append(part.delta)
-            if response_container:
-                response_container.markdown(''.join(response_text))
+        yield part.delta
 
-    if is_chainlit:
-        await response_container.update()
-        response_msg = response_container.content
-    else:
-        response_msg = ''.join(response_text)
+    #response_msg = ''.join(response_text)
 
-    return response_msg, function_data
+    #return response_msg, function_data
 
 def get_llm_tts_response(text_input):
     audio_response = audio_client.audio.speech.create(
@@ -398,7 +387,7 @@ def search_knowledge_base(query, media_label, session_state, storage_root_path='
 
     video_rag_inst = session_state[media_label]
 
-    print(f"Index documents count: {video_rag_inst.count_documents()}")
+    #print(f"Index documents count: {video_rag_inst.count_documents()}")
     img_docs, text_docs = video_rag_inst.retrieve(query)
 
     print(f"Number of relevant text documents: {len(text_docs)}")
