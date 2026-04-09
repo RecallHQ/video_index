@@ -10,7 +10,8 @@ boto3==1.35.29
 botocore==1.35.29
 build==1.2.2.post1
 cffi==1.17.1
-clip @ git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1
+openai-clip
+#clip @ git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1
 coloredlogs==15.0.1
 comm==0.2.2
 debugpy==1.8.6
@@ -101,7 +102,8 @@ ollama==0.3.3
 onnx==1.17.0
 onnxruntime==1.19.2
 openai==1.75.0
-openai-whisper @ git+https://github.com/openai/whisper.git@279133e3107392276dc509148da1f41bfb532c7e
+#openai-whisper @ git+https://github.com/openai/whisper.git@279133e3107392276dc509148da1f41bfb532c7e
+openai-whisper
 opencv-python==4.10.0.84
 orjson==3.10.7
 overrides==7.7.0
