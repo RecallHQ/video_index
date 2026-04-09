@@ -25,6 +25,12 @@ load_dotenv()
 endpoint_url = "https://api.openai.com/v1"
 
 configurations = {
+    "anthropic_claude": {
+        "endpoint_url": None,
+        "api_key": os.getenv("ANTHROPIC_API_KEY"),
+        "model": "claude-3-haiku-20240307",
+        "audio_model": None
+    },
     "mistral_7B_instruct": {
         "endpoint_url": os.getenv("MISTRAL_7B_INSTRUCT_ENDPOINT"),
         "api_key": os.getenv("RUNPOD_API_KEY"),
@@ -44,9 +50,10 @@ configurations = {
 }
 
 # Choose configuration
-config_key = "openai_gpt-4"
+#config_key = "openai_gpt-4"
 #config_key = "mistral_7B_instruct"
 #config_key = "mistral_7B"
+config_key = "anthropic_claude"
 
 # Get selected configuration
 config = configurations[config_key]
@@ -87,8 +94,14 @@ tools = [
     }
 ]
 
-client = openai.AsyncClient(api_key=config["api_key"], base_url=config["endpoint_url"])
-audio_client = openai.OpenAI(api_key=config["api_key"])
+# Initialize client based on configuration
+if config_key == "anthropic_claude":
+    import anthropic
+    client = anthropic.AsyncAnthropic(api_key=config["api_key"])
+    audio_client = None  # Anthropic doesn't have TTS in this context
+else:
+    client = openai.AsyncClient(api_key=config["api_key"], base_url=config["endpoint_url"])
+    audio_client = openai.OpenAI(api_key=config["api_key"])
 
 def load_knowledge_base(media_label):
     # load knowledge base
@@ -355,31 +368,57 @@ async def get_llm_response(query, messages, tools_call=True, response_container=
     response_text = []
     function_data = {}
 
-    stream = await client.chat.completions.create(
-        messages=messages,
-        tools=tools if tools_call else None,
-        stream=True,
-        **gen_kwargs)
+    if config_key == "anthropic_claude":
+        # Anthropic API call
+        stream = await client.messages.create(
+            messages=messages,
+            tools=tools if tools_call else None,
+            stream=True,
+            max_tokens=gen_kwargs.get("max_tokens", 500),
+            temperature=gen_kwargs.get("temperature", 0.2),
+            model=gen_kwargs.get("model", "claude-3-haiku-20240307")
+        )
 
-    async for part in stream:
-        if part.choices[0].delta.tool_calls:
-            tool_call = part.choices[0].delta.tool_calls[0]
-            function_name = tool_call.function.name or ""
-            arguments = tool_call.function.arguments or ""
-            index = tool_call.index
-            print(f"tool_call: {tool_call}")
-            index_data = function_data.setdefault(index, {})
-            index_data.setdefault("name", []).append(function_name)
-            index_data.setdefault("arguments", []).append(arguments)
+        async for part in stream:
+            if part.type == "content_block_delta":
+                if part.delta.type == "text_delta":
+                    token = part.delta.text
+                    response_text.append(token)
+                    if response_container:
+                        response_container.markdown(''.join(response_text))
+            elif part.type == "content_block_stop" and hasattr(part, 'content_block') and part.content_block.type == "tool_use":
+                # Handle tool calls for Anthropic
+                tool_use = part.content_block
+                function_data[0] = {
+                    "name": tool_use.name,
+                    "arguments": json.dumps(tool_use.input) if tool_use.input else "{}"
+                }
+    else:
+        # OpenAI API call
+        stream = await client.chat.completions.create(
+            messages=messages,
+            tools=tools if tools_call else None,
+            stream=True,
+            **gen_kwargs)
 
-        if token := part.choices[0].delta.content or "":
-            #await update_response_container(response_container, response_text, token)
-            response_text.append(token)
-            if response_container:
-                response_container.markdown(''.join(response_text))
-    for index, index_data in function_data.items():
-        index_data["name"] = ''.join(index_data["name"])
-        index_data["arguments"] = ''.join(index_data["arguments"])
+        async for part in stream:
+            if part.choices[0].delta.tool_calls:
+                tool_call = part.choices[0].delta.tool_calls[0]
+                function_name = tool_call.function.name or ""
+                arguments = tool_call.function.arguments or ""
+                index = tool_call.index
+                print(f"tool_call: {tool_call}")
+                index_data = function_data.setdefault(index, {})
+                index_data.setdefault("name", []).append(function_name)
+                index_data.setdefault("arguments", []).append(arguments)
+
+            if token := part.choices[0].delta.content or "":
+                response_text.append(token)
+                if response_container:
+                    response_container.markdown(''.join(response_text))
+        for index, index_data in function_data.items():
+            index_data["name"] = ''.join(index_data["name"])
+            index_data["arguments"] = ''.join(index_data["arguments"])
     return ''.join(response_text), function_data
 
 def search_knowledge_base(query, media_label, session_state, storage_root_path='./events_kb'):
