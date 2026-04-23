@@ -1,19 +1,42 @@
 import os
 import json
+import traceback
 from glob import glob
 from llama_index.core.indices import MultiModalVectorStoreIndex
 
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext, load_index_from_storage
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext, load_index_from_storage, Settings
 from llama_index.core.vector_stores.simple import SimpleVectorStore
 from llama_index.vector_stores.lancedb import LanceDBVectorStore
 from llama_index.vector_stores.qdrant import QdrantVectorStore
+from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
+from llama_index.core.embeddings import MockEmbedding
 
 from llama_index.core.schema import ImageNode
 
 from llama_index.multi_modal_llms.openai import OpenAIMultiModal
-
 import qdrant_client
 from tinydb import TinyDB, Query
+
+# Configure Azure OpenAI embeddings using AzureOpenAIEmbedding
+model_name = "text-embedding-ada-002"
+    
+try:
+    print(f"Trying Azure OpenAI embeddings with deployment: {model_name}")
+    Settings.embed_model = AzureOpenAIEmbedding(
+        model=model_name,
+        deployment_name="text-embedding-ada-002",
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_version="2023-05-15"
+    )
+    print(f"Azure OpenAI embeddings configured successfully with deployment: {model_name}")
+except Exception as e:
+    print(f"Failed with deployment {model_name}: {type(e).__name__} - {str(e)}")
+    print(f"Traceback for {model_name}: {traceback.format_exc()}")
+        
+    # Fallback to mock embeddings (no API key needed)
+    Settings.embed_model = MockEmbedding(embed_dim=1536)
+    print("Using mock embeddings (no API key required)")
 
 
 class VideoRag:
@@ -187,11 +210,18 @@ class VideoRag:
         return context_str, image_documents
     
     def init_multimodal_oai(self):
-        self.openai_mm_llm = OpenAIMultiModal(model="gpt-4o", max_new_tokens=1500)
+        from llama_index.llms.azure_openai import AzureOpenAI
+        self.openai_mm_llm = AzureOpenAI(
+            model="gpt-4o",  # Use Azure deployment name
+            deployment_name="gpt-4o",  # Use your Azure deployment name
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+        )
 
     def query_with_oai(self, query_str, context, img):
         text_response = self.openai_mm_llm.complete(prompt=VideoRag._query_prompt.format(
-            context_str=context, query_str=query_str, event_metadata=""), image_documents=img)
+            context_str=context, query_str=query_str, event_metadata=""))
 
         print(text_response.text)
         return text_response.text
